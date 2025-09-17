@@ -4,6 +4,108 @@
     box-sizing: border-box;
 }
 
+/* 网页保护样式 */
+body, html {
+    /* 禁用文本选择 */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    
+    /* 禁用拖拽 */
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    -webkit-user-drag: none; /* Use standard vendor prefix instead of non-standard user-drag */
+    
+    /* 禁用高亮 */
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    
+    /* 禁用右键菜单的CSS保护 */
+    -webkit-context-menu: none;
+    -moz-context-menu: none;
+    context-menu: none;
+}
+
+/* 禁用图片拖拽和右键 */
+img {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    -webkit-user-drag: none; /* Use standard vendor prefix instead of non-standard user-drag */
+    pointer-events: none;
+    -webkit-context-menu: none;
+    -moz-context-menu: none;
+    context-menu: none;
+}
+
+/* 全局右键禁用保护 */
+* {
+    -webkit-context-menu: none;
+    -moz-context-menu: none;
+    context-menu: none;
+}
+
+/* 特别保护常见的右键目标元素 */
+div, p, span, h1, h2, h3, h4, h5, h6, ul, li, table, td, th {
+    -webkit-context-menu: none !important;
+    -moz-context-menu: none !important;
+    context-menu: none !important;
+}
+
+/* 禁用链接拖拽 */
+a {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    -webkit-user-drag: none; /* Use standard vendor prefix instead */
+}
+
+/* 允许输入框和按钮的正常交互 */
+input, textarea, button, select {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    pointer-events: auto !important;
+}
+
+/* 允许按钮的正常交互 */
+button, .btn, .login-btn, .logout-btn, .save-ratings-btn {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+/* 隐藏滚动条（可选，增加保护效果） */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
 /* 登录界面样式 */
 .login-modal {
     position: fixed;

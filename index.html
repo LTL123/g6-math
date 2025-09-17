@@ -6,6 +6,147 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Grade 6 Math Learning Journey</title>
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- 网页保护脚本 -->
+    <script>
+        // 禁用右键菜单 - 多重保护
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        });
+
+        // 禁用鼠标右键 - 兼容性保护
+        document.addEventListener('mousedown', function(e) {
+            if (e.button === 2) { // 右键
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+
+        // 禁用鼠标右键释放
+        document.addEventListener('mouseup', function(e) {
+            if (e.button === 2) { // 右键
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+
+        // 禁用触摸设备长按（移动端右键等效）
+        let touchTimer;
+        document.addEventListener('touchstart', function(e) {
+            touchTimer = setTimeout(function() {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }, 500); // 500ms长按
+        });
+
+        document.addEventListener('touchend', function(e) {
+            clearTimeout(touchTimer);
+        });
+
+        document.addEventListener('touchmove', function(e) {
+            clearTimeout(touchTimer);
+        });
+
+        // 禁用F12和其他开发者工具快捷键
+        document.addEventListener('keydown', function(e) {
+            // 禁用F12
+            if (e.key === 'F12') {
+                e.preventDefault();
+                return false;
+            }
+            
+            // 禁用Ctrl+Shift+I (开发者工具)
+            if (e.ctrlKey && e.shiftKey && e.key === 'I') {
+                e.preventDefault();
+                return false;
+            }
+            
+            // 禁用Ctrl+Shift+J (控制台)
+            if (e.ctrlKey && e.shiftKey && e.key === 'J') {
+                e.preventDefault();
+                return false;
+            }
+            
+            // 禁用Ctrl+U (查看源代码)
+            if (e.ctrlKey && e.key === 'u') {
+                e.preventDefault();
+                return false;
+            }
+            
+            // 禁用Ctrl+Shift+C (元素选择器)
+            if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+                e.preventDefault();
+                return false;
+            }
+            
+            // 禁用Ctrl+S (保存页面)
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                return false;
+            }
+            
+            // 禁用Ctrl+A (全选)
+            if (e.ctrlKey && e.key === 'a') {
+                e.preventDefault();
+                return false;
+            }
+            
+            // 禁用Ctrl+P (打印)
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // 禁用文本选择
+        document.addEventListener('selectstart', function(e) {
+            e.preventDefault();
+            return false;
+        });
+
+        // 禁用拖拽
+        document.addEventListener('dragstart', function(e) {
+            e.preventDefault();
+            return false;
+        });
+
+        // 检测开发者工具是否打开
+        let devtools = {
+            open: false,
+            orientation: null
+        };
+        
+        const threshold = 160;
+        
+        setInterval(function() {
+            if (window.outerHeight - window.innerHeight > threshold || 
+                window.outerWidth - window.innerWidth > threshold) {
+                if (!devtools.open) {
+                    devtools.open = true;
+                    // 当检测到开发者工具打开时，可以选择重定向或显示警告
+                    alert('请不要尝试查看页面源代码！');
+                    // 可选：重定向到其他页面
+                    // window.location.href = 'about:blank';
+                }
+            } else {
+                devtools.open = false;
+            }
+        }, 500);
+
+        // 禁用控制台输出
+        if (typeof console !== 'undefined') {
+            console.log = function() {};
+            console.warn = function() {};
+            console.error = function() {};
+            console.info = function() {};
+            console.debug = function() {};
+        }
+    </script>
 </head>
 <body>
     <!-- 登录界面 -->
