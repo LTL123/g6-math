@@ -26,7 +26,7 @@ body, html {
     /* 禁用右键菜单的CSS保护 */
     -webkit-context-menu: none;
     -moz-context-menu: none;
-    context-menu: none;
+    -webkit-user-select: none; /* Prevent context menu by disabling text selection */
 }
 
 /* 禁用图片拖拽和右键 */
@@ -43,21 +43,21 @@ img {
     pointer-events: none;
     -webkit-context-menu: none;
     -moz-context-menu: none;
-    context-menu: none;
+    /* Remove invalid context-menu property */
 }
 
 /* 全局右键禁用保护 */
 * {
     -webkit-context-menu: none;
     -moz-context-menu: none;
-    context-menu: none;
+    /* Remove invalid context-menu property */
 }
 
 /* 特别保护常见的右键目标元素 */
 div, p, span, h1, h2, h3, h4, h5, h6, ul, li, table, td, th {
     -webkit-context-menu: none !important;
     -moz-context-menu: none !important;
-    context-menu: none !important;
+    /* Remove invalid context-menu property */
 }
 
 /* 禁用链接拖拽 */
@@ -1279,10 +1279,39 @@ main {
 }
 
 .comment p {
-    margin: 0 0 0.5rem 0;
+    margin: 0;
 }
 
-.comment .comment-meta {
+.comment-header-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.comment-meta {
     font-size: 0.8rem;
     color: #777;
+    flex-grow: 1;
+}
+
+.delete-comment-btn {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    user-select: none;
+    pointer-events: auto;
+}
+
+.delete-comment-btn:hover {
+    background-color: #c82333;
+}
+
+.delete-comment-btn:active {
+    background-color: #bd2130;
 }

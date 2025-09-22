@@ -8,139 +8,6 @@ AV.init({
 // 用户管理
 let currentUser = null;
 
-// 从课程 JSON 渲染页面
-async function renderCurriculumFromJSON() {
-    try {
-        const response = await fetch('../scope-sequence-2025-G6-V1.json');
-        if (!response.ok) throw new Error('无法加载课程数据');
-        const data = await response.json();
-
-        const units = Array.isArray(data.units) ? data.units : [];
-        const grade6 = document.getElementById('grade-6');
-        if (!grade6) return;
-
-        // 重置并渲染标题
-        grade6.innerHTML = '';
-        const title = document.createElement('h2');
-        title.textContent = 'Grade 6 Curriculum';
-        grade6.appendChild(title);
-
-        // 仅渲染 subject 为 math 的单元（保持原有顺序）
-        units.filter(u => u && u.subject === 'math').forEach(unit => {
-            const unitDiv = document.createElement('div');
-            unitDiv.className = 'unit';
-
-            const unitHeader = document.createElement('h3');
-            unitHeader.className = 'unit-title collapsible';
-            unitHeader.innerHTML = `📖 ${unit.title} <span class="toggle-icon">▼</span>`;
-
-            const lessonsWrap = document.createElement('div');
-            lessonsWrap.className = 'lessons collapsible-content';
-
-            // 依据单元的周数生成对应课时数量
-            const objectives = Array.isArray(unit.objectives) ? unit.objectives : [];
-            const lessonCount = Math.max(1, Number.isFinite(unit.duration) ? unit.duration : 1);
-            const chunkSize = Math.ceil(objectives.length / lessonCount) || 0;
-
-            for (let i = 0; i < lessonCount; i++) {
-                const lessonCard = document.createElement('div');
-                lessonCard.className = 'lesson-card';
-
-                const lessonTitle = document.createElement('h4');
-                lessonTitle.className = 'lesson-title collapsible';
-                lessonTitle.innerHTML = `Lesson ${i + 1} <span class="toggle-icon">▼</span>`;
-
-                const lessonSummary = document.createElement('div');
-                lessonSummary.className = 'lesson-summary collapsible-content';
-
-                const descP = document.createElement('p');
-                descP.innerHTML = `<strong>Summary:</strong> ${unit.description || ''}`;
-
-                const objectivesTitle = document.createElement('p');
-                objectivesTitle.innerHTML = '<strong>Learning Objectives:</strong>';
-
-                const ul = document.createElement('ul');
-                ul.className = 'objectives-list';
-
-                const start = i * chunkSize;
-                const end = chunkSize > 0 ? Math.min(start + chunkSize, objectives.length) : 0;
-                const slice = chunkSize > 0 ? objectives.slice(start, end) : [];
-
-                slice.forEach(obj => {
-                    const li = document.createElement('li');
-                    li.className = 'objective-item';
-                    li.setAttribute('data-objective', obj.id);
-
-                    const textSpan = document.createElement('span');
-                    textSpan.className = 'objective-text';
-                    const chinese = obj.chinese || '';
-                    const english = obj.english ? ` (${obj.english})` : '';
-                    textSpan.textContent = `${chinese}${english}`;
-
-                    const starDiv = document.createElement('div');
-                    starDiv.className = 'star-rating';
-                    for (let r = 1; r <= 3; r++) {
-                        const star = document.createElement('span');
-                        star.className = 'star';
-                        star.setAttribute('data-rating', String(r));
-                        star.textContent = '★';
-                        starDiv.appendChild(star);
-                    }
-                    const label = document.createElement('span');
-                    label.className = 'rating-label';
-                    label.textContent = '未评分';
-                    starDiv.appendChild(label);
-
-                    li.appendChild(textSpan);
-                    li.appendChild(starDiv);
-                    ul.appendChild(li);
-                });
-
-                const saveBtn = document.createElement('button');
-                saveBtn.className = 'save-ratings-btn';
-                saveBtn.setAttribute('data-lesson', `${unit.id}-lesson-${i + 1}`);
-                saveBtn.textContent = '保存评分';
-
-                const successDiv = document.createElement('div');
-                successDiv.className = 'rating-success';
-                successDiv.textContent = '评分已保存！';
-
-                lessonSummary.appendChild(descP);
-                lessonSummary.appendChild(objectivesTitle);
-                lessonSummary.appendChild(ul);
-                lessonSummary.appendChild(saveBtn);
-                lessonSummary.appendChild(successDiv);
-
-                lessonCard.appendChild(lessonTitle);
-                lessonCard.appendChild(lessonSummary);
-                lessonsWrap.appendChild(lessonCard);
-            }
-
-            unitDiv.appendChild(unitHeader);
-            unitDiv.appendChild(lessonsWrap);
-            grade6.appendChild(unitDiv);
-        });
-
-        // 渲染后初始化交互
-        // 复用现有函数（已在 DOMContentLoaded 内定义）
-        // 这些函数在同一作用域内可见
-        const reinit = () => {
-            // 重新初始化折叠与高度、星级与搜索
-            if (typeof initializeCollapsible === 'function') initializeCollapsible();
-            if (typeof setInitialHeights === 'function') setInitialHeights();
-            if (typeof initializeStarRating === 'function') initializeStarRating();
-            if (typeof addExpandCollapseAllButtons === 'function') addExpandCollapseAllButtons();
-            if (typeof addLoadingEffect === 'function') addLoadingEffect();
-            if (typeof initializeCustomTooltips === 'function') initializeCustomTooltips();
-        };
-        // 延迟以确保节点插入完成
-        setTimeout(reinit, 50);
-
-    } catch (e) {
-        console.error('渲染课程失败：', e);
-    }
-}
-
 // 登录功能
 function initLogin() {
     const loginModal = document.getElementById('loginModal');
@@ -158,44 +25,46 @@ function initLogin() {
     }
 
     // 登录表单提交
-    loginForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        
-        // 定义有效的用户账户
-        const validUsers = {
-            'test': '123456',
-            'Yuki': '20131025',
-            'Sarah': '20140409',
-            'Richard': '20140731',
-            'Taylor': '20140708',
-            'Samuel': '20140102',
-            'Orange': '20140427',
-            'Eddy': '20140824',
-            'Butterfly': '20130927',
-            'Avina': '20131226',
-            'Ella': '20140415',
-            'Bella': '20140714',
-            'Zoe': '20140528',
-            'Yiyi': '20140722',
-            'Stephen': '20140408',
-            'Jimmy': '20131214',
-            'Suzy': '20130723',
-            'Alicia': '20140820'
-        };
-        
-        // 验证用户名和密码
-        if (validUsers[username] && validUsers[username] === password) {
-            currentUser = username;
-            localStorage.setItem('currentUser', username);
-            showMainContent();
-            loginError.style.display = 'none';
-        } else {
-            loginError.style.display = 'block';
-        }
-    });
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            // 定义有效的用户账户
+            const validUsers = {
+                'test': '123456',
+                'Yuki': '20131025',
+                'Sarah': '20140409',
+                'Richard': '20140731',
+                'Taylor': '20140708',
+                'Samuel': '20140102',
+                'Orange': '20140427',
+                'Eddy': '20140824',
+                'Butterfly': '20130927',
+                'Avina': '20131226',
+                'Ella': '20140415',
+                'Bella': '20140714',
+                'Zoe': '20140528',
+                'Yiyi': '20140722',
+                'Stephen': '20140408',
+                'Jimmy': '20131214',
+                'Suzy': '20130723',
+                'Alicia': '20140820'
+            };
+            
+            // 验证用户名和密码
+            if (validUsers[username] && validUsers[username] === password) {
+                currentUser = username;
+                localStorage.setItem('currentUser', username);
+                showMainContent();
+                loginError.style.display = 'none';
+            } else {
+                loginError.style.display = 'block';
+            }
+        });
+    }
 
     // 退出登录
     logoutBtn.addEventListener('click', function() {
@@ -212,7 +81,6 @@ function initLogin() {
     loginModal.style.display = 'none';
     mainContent.style.display = 'block';
     currentUserSpan.textContent = currentUser;
-    await renderCurriculumFromJSON();
     loadUserRatings();
 
     // After rendering, initialize comment forms and load existing comments
@@ -341,19 +209,68 @@ async function loadUnitComments(unitId, displayElement) {
             const commentDiv = document.createElement('div');
             commentDiv.className = 'comment';
             
+            // 创建评论头部容器
+            const commentHeader = document.createElement('div');
+            commentHeader.className = 'comment-header-info';
+            
             const commentMeta = document.createElement('div');
             commentMeta.className = 'comment-meta';
             commentMeta.textContent = `By ${comment.get('studentId')} on ${new Date(comment.get('createdAt')).toLocaleString()}`;
 
+            commentHeader.appendChild(commentMeta);
+
+            // 如果是当前用户的评论，添加删除按钮
+            if (currentUser && comment.get('studentId') === currentUser) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-comment-btn';
+                deleteBtn.textContent = '删除';
+                deleteBtn.setAttribute('data-comment-id', comment.id);
+                deleteBtn.onclick = () => deleteComment(comment.id, unitId, displayElement);
+                commentHeader.appendChild(deleteBtn);
+            }
+
             const commentText = document.createElement('p');
             commentText.textContent = comment.get('comment');
 
-            commentDiv.appendChild(commentMeta);
+            commentDiv.appendChild(commentHeader);
             commentDiv.appendChild(commentText);
             displayElement.appendChild(commentDiv);
         });
     } catch (error) {
         console.error(`加载 ${unitId} 的评论失败：`, error);
+    }
+}
+
+// Function to delete a comment
+async function deleteComment(commentId, unitId, displayElement) {
+    // 添加删除确认
+    if (!confirm('确定要删除这条评论吗？此操作无法撤销。')) {
+        return;
+    }
+
+    try {
+        // 首先验证评论是否属于当前用户
+        const query = new AV.Query('UnitComment');
+        const comment = await query.get(commentId);
+        
+        // 安全检查：确保只有评论作者可以删除
+        if (comment.get('studentId') !== currentUser) {
+            alert('您只能删除自己的评论！');
+            return;
+        }
+
+        // 删除评论
+        await comment.destroy();
+        
+        // 重新加载评论列表
+        loadUnitComments(unitId, displayElement);
+        
+        // 显示成功消息
+        alert('评论已成功删除！');
+        
+    } catch (error) {
+        console.error('删除评论失败：', error);
+        alert('删除评论失败，请稍后重试。');
     }
 }
 
