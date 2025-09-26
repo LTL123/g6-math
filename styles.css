@@ -1315,3 +1315,38 @@ main {
 .delete-comment-btn:active {
     background-color: #bd2130;
 }
+
+/* User comment special styling */
+.user-comment {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%) !important;
+    border-left: 4px solid #f39c12 !important;
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.2) !important;
+    position: relative;
+}
+
+.user-comment::before {
+    content: "置顶";
+    position: absolute;
+    top: -8px;
+    right: 10px;
+    background: #f39c12;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
+/* Comment link styling */
+.comment-link {
+    color: #007bff;
+    text-decoration: none;
+    border-bottom: 1px dotted #007bff;
+    transition: all 0.3s ease;
+}
+
+.comment-link:hover {
+    color: #0056b3;
+    border-bottom: 1px solid #0056b3;
+    text-decoration: none;
+}

@@ -1,8 +1,8 @@
 // 初始化 LeanCloud
 AV.init({
-    appId: '3qzn4aX6LJQW2DZwfhqiokQJ-MdYXbMMI',
-    appKey: 'ztDFPH4wWEKKaLDsaSFN9rUX',
-    serverURL: 'https://3qzn4ax6.api.lncldglobal.com'
+    appId: '8k8O5dXKja46k19GFxSPtiEC-gzGzoHsz',
+    appKey: 'YP1pWKaZ1WAF8uWfA82XGBcE',
+    serverURL: 'https://8k8o5dxk.lc-cn-n1-shared.com'
 });
 
 // 用户管理
@@ -163,6 +163,12 @@ async function loadUserRatings() {
         
     } catch (error) {
         console.error('加载评分数据失败:', error);
+        // 如果是表不存在的错误，不显示错误信息，因为这是正常的
+        if (error.code === 101 || error.message.includes('does not exist')) {
+            console.log('ObjectiveRating表尚未创建，这是正常的');
+        } else {
+            console.error('其他错误:', error);
+        }
     }
 }
 
@@ -189,9 +195,86 @@ async function handleCommentSubmit(e) {
             loadUnitComments(unitId, unitDiv.querySelector('.comments-display'));
         } catch (error) {
             console.error('保存评论失败：', error);
-            alert('评论失败，请稍后重试。');
+            // 如果是表不存在的错误，尝试直接创建
+            if (error.code === 101 || error.message.includes('does not exist')) {
+                try {
+                    // 直接创建新评论，让LeanCloud自动创建表
+                    const newComment = new Comment();
+                    await newComment.save({
+                        unitId: unitId,
+                        studentId: currentUser,
+                        comment: commentText
+                    });
+                    textarea.value = '';
+                    loadUnitComments(unitId, unitDiv.querySelector('.comments-display'));
+                } catch (createError) {
+                    console.error('创建评论失败:', createError);
+                    alert('评论失败，请稍后重试。');
+                }
+            } else {
+                alert('评论失败，请稍后重试。');
+            }
         }
     }
+}
+
+// Function to create comment element with hyperlink support
+function createCommentElement(comment, unitId, displayElement) {
+    const commentDiv = document.createElement('div');
+    commentDiv.className = 'comment';
+    
+    // 如果是user的评论，添加特殊样式
+    if (comment.get('studentId') === 'user') {
+        commentDiv.classList.add('user-comment');
+    }
+    
+    // 创建评论头部容器
+    const commentHeader = document.createElement('div');
+    commentHeader.className = 'comment-header-info';
+    
+    const commentMeta = document.createElement('div');
+    commentMeta.className = 'comment-meta';
+    commentMeta.textContent = `By ${comment.get('studentId')} on ${new Date(comment.get('createdAt')).toLocaleString()}`;
+
+    commentHeader.appendChild(commentMeta);
+
+    // 如果是当前用户的评论，添加删除按钮
+    if (currentUser && comment.get('studentId') === currentUser) {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-comment-btn';
+        deleteBtn.textContent = '删除';
+        deleteBtn.setAttribute('data-comment-id', comment.id);
+        deleteBtn.onclick = () => deleteComment(comment.id, unitId, displayElement);
+        commentHeader.appendChild(deleteBtn);
+    }
+
+    const commentText = document.createElement('p');
+    const commentContent = comment.get('comment');
+    
+    // 将网址转换为超链接
+    const textWithLinks = convertUrlsToLinks(commentContent);
+    commentText.innerHTML = textWithLinks;
+
+    commentDiv.appendChild(commentHeader);
+    commentDiv.appendChild(commentText);
+    
+    return commentDiv;
+}
+
+// Function to convert URLs in text to clickable links
+function convertUrlsToLinks(text) {
+    // URL正则表达式，匹配http、https、www开头的网址
+    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?)/g;
+    
+    return text.replace(urlRegex, function(url) {
+        // 如果URL没有协议，添加https://
+        let href = url;
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            href = 'https://' + url;
+        }
+        
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="comment-link">${url}</a>`;
+    });
 }
 
 // Function to load comments for a unit
@@ -205,39 +288,30 @@ async function loadUnitComments(unitId, displayElement) {
     try {
         const comments = await query.find();
         displayElement.innerHTML = ''; // Clear existing comments
-        comments.forEach(comment => {
-            const commentDiv = document.createElement('div');
-            commentDiv.className = 'comment';
-            
-            // 创建评论头部容器
-            const commentHeader = document.createElement('div');
-            commentHeader.className = 'comment-header-info';
-            
-            const commentMeta = document.createElement('div');
-            commentMeta.className = 'comment-meta';
-            commentMeta.textContent = `By ${comment.get('studentId')} on ${new Date(comment.get('createdAt')).toLocaleString()}`;
-
-            commentHeader.appendChild(commentMeta);
-
-            // 如果是当前用户的评论，添加删除按钮
-            if (currentUser && comment.get('studentId') === currentUser) {
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'delete-comment-btn';
-                deleteBtn.textContent = '删除';
-                deleteBtn.setAttribute('data-comment-id', comment.id);
-                deleteBtn.onclick = () => deleteComment(comment.id, unitId, displayElement);
-                commentHeader.appendChild(deleteBtn);
-            }
-
-            const commentText = document.createElement('p');
-            commentText.textContent = comment.get('comment');
-
-            commentDiv.appendChild(commentHeader);
-            commentDiv.appendChild(commentText);
+        
+        // 分离user的评论和其他用户的评论
+        const userComments = comments.filter(comment => comment.get('studentId') === 'user');
+        const otherComments = comments.filter(comment => comment.get('studentId') !== 'user');
+        
+        // 先显示user的评论（置顶）
+        userComments.forEach(comment => {
+            const commentDiv = createCommentElement(comment, unitId, displayElement);
+            displayElement.appendChild(commentDiv);
+        });
+        
+        // 再显示其他用户的评论
+        otherComments.forEach(comment => {
+            const commentDiv = createCommentElement(comment, unitId, displayElement);
             displayElement.appendChild(commentDiv);
         });
     } catch (error) {
         console.error(`加载 ${unitId} 的评论失败：`, error);
+        // 如果是表不存在的错误，不显示错误信息，因为这是正常的
+        if (error.code === 101 || error.message.includes('does not exist')) {
+            console.log('UnitComment表尚未创建，这是正常的');
+        } else {
+            console.error('其他错误:', error);
+        }
     }
 }
 
@@ -707,32 +781,56 @@ document.addEventListener('DOMContentLoaded', function() {
                     const ObjectiveRating = AV.Object.extend('ObjectiveRating');
                     
                     for (const rating of ratings) {
-                        // 查询是否已存在相同学生和目标的记录
-                        const query = new AV.Query('ObjectiveRating');
-                        query.equalTo('studentId', currentUser || 'anonymous');
-                        query.equalTo('objectiveId', rating.objectiveId);
-                        
-                        const existingRating = await query.first();
-                        
-                        let ratingObj;
-                        if (existingRating) {
-                            // 如果存在，更新现有记录
-                            existingRating.set('lessonName', rating.lessonName);
-                            existingRating.set('objectiveText', rating.objectiveText);
-                            existingRating.set('rating', rating.rating);
-                            existingRating.set('updateTime', new Date());
-                            await existingRating.save();
-                        } else {
-                            // 如果不存在，创建新记录
-                            ratingObj = new ObjectiveRating();
-                            await ratingObj.save({
-                                lessonName: rating.lessonName,
-                                objectiveText: rating.objectiveText,
-                                rating: rating.rating,
-                                studentId: currentUser || 'anonymous',
-                                objectiveId: rating.objectiveId,
-                                updateTime: new Date()
-                            });
+                        try {
+                            // 查询是否已存在相同学生和目标的记录
+                            const query = new AV.Query('ObjectiveRating');
+                            query.equalTo('studentId', currentUser || 'anonymous');
+                            query.equalTo('objectiveId', rating.objectiveId);
+                            
+                            const existingRating = await query.first();
+                            
+                            let ratingObj;
+                            if (existingRating) {
+                                // 如果存在，更新现有记录
+                                existingRating.set('lessonName', rating.lessonName);
+                                existingRating.set('objectiveText', rating.objectiveText);
+                                existingRating.set('rating', rating.rating);
+                                existingRating.set('updateTime', new Date());
+                                await existingRating.save();
+                            } else {
+                                // 如果不存在，创建新记录
+                                ratingObj = new ObjectiveRating();
+                                await ratingObj.save({
+                                    lessonName: rating.lessonName,
+                                    objectiveText: rating.objectiveText,
+                                    rating: rating.rating,
+                                    studentId: currentUser || 'anonymous',
+                                    objectiveId: rating.objectiveId,
+                                    updateTime: new Date()
+                                });
+                            }
+                        } catch (tableError) {
+                            console.error('数据表操作失败:', tableError);
+                            // 如果ObjectiveRating表不存在，尝试创建并保存
+                            if (tableError.code === 101 || tableError.message.includes('does not exist')) {
+                                try {
+                                    // 直接创建新记录，让LeanCloud自动创建表
+                                    const newRating = new ObjectiveRating();
+                                    await newRating.save({
+                                        lessonName: rating.lessonName,
+                                        objectiveText: rating.objectiveText,
+                                        rating: rating.rating,
+                                        studentId: currentUser || 'anonymous',
+                                        objectiveId: rating.objectiveId,
+                                        updateTime: new Date()
+                                    });
+                                } catch (createError) {
+                                    console.error('创建记录失败:', createError);
+                                    throw createError;
+                                }
+                            } else {
+                                throw tableError;
+                            }
                         }
                     }
                     
