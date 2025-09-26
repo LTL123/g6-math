@@ -35,6 +35,7 @@ function initLogin() {
             // 定义有效的用户账户
             const validUsers = {
                 'test': '123456',
+                'user':'123456',
                 'Yuki': '20131025',
                 'Sarah': '20140409',
                 'Richard': '20140731',
