@@ -931,3 +931,116 @@ document.addEventListener('DOMContentLoaded', function() {
     window.initializeCustomTooltips = initializeCustomTooltips;
     initializeCustomTooltips();
 });
+
+
+// Smooth scrolling and navbar active state
+function initNavbarScroll() {
+    const navbar = document.querySelector('.top-navbar');
+    const links = document.querySelectorAll('.nav-menu a');
+    const sections = Array.from(links).map(link => document.getElementById(link.dataset.target)).filter(Boolean);
+    const gradeContent = document.querySelector('#grade-6');
+
+    // Helper: show only one unit and hide others
+    function showOnlyUnitById(targetId) {
+        if (!gradeContent) return;
+        gradeContent.classList.add('single-mode');
+        const units = gradeContent.querySelectorAll('.unit');
+        units.forEach(unit => {
+            if (unit.id === targetId) {
+                unit.classList.add('single-active');
+            } else {
+                unit.classList.remove('single-active');
+            }
+        });
+    }
+
+    // Smooth scroll on click + single-unit mode
+    links.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.dataset.target;
+            const targetEl = document.getElementById(targetId);
+            if (targetEl) {
+                // Enter single-unit mode
+                showOnlyUnitById(targetId);
+                // Update hash to reflect current unit
+                if (window.location.hash !== `#${targetId}`) {
+                    window.location.hash = targetId;
+                }
+                // Smooth scroll accounting for fixed navbar
+                const headerOffset = 64; // account for fixed navbar
+                const elementPosition = targetEl.getBoundingClientRect().top + window.pageYOffset;
+                const offsetPosition = elementPosition - headerOffset;
+                window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+            }
+        });
+    });
+
+    // Active state on scroll using IntersectionObserver
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const id = entry.target.id;
+            const link = document.querySelector(`.nav-menu a[data-target="${id}"]`);
+            if (!link) return;
+            if (entry.isIntersecting) {
+                links.forEach(a => a.classList.remove('active'));
+                link.classList.add('active');
+            }
+        });
+    }, {
+        root: null,
+        rootMargin: '0px 0px -60% 0px', // trigger when section top crosses viewport top
+        threshold: 0.2
+    });
+
+    sections.forEach(sec => observer.observe(sec));
+
+    // Enter single-unit mode if URL has hash initially
+    const initialHash = window.location.hash ? window.location.hash.replace('#','') : '';
+    if (initialHash) {
+        showOnlyUnitById(initialHash);
+        const activeLink = document.querySelector(`.nav-menu a[data-target="${initialHash}"]`);
+        if (activeLink) {
+            links.forEach(a => a.classList.remove('active'));
+            activeLink.classList.add('active');
+        }
+    }
+
+    // Listen for hash changes to switch units
+    window.addEventListener('hashchange', () => {
+        const hashId = window.location.hash ? window.location.hash.replace('#','') : '';
+        if (hashId) {
+            showOnlyUnitById(hashId);
+            const activeLink = document.querySelector(`.nav-menu a[data-target="${hashId}"]`);
+            if (activeLink) {
+                links.forEach(a => a.classList.remove('active'));
+                activeLink.classList.add('active');
+            }
+        } else {
+            // Exit single-unit mode when hash cleared
+            if (gradeContent) {
+                gradeContent.classList.remove('single-mode');
+                const units = gradeContent.querySelectorAll('.unit');
+                units.forEach(u => u.classList.remove('single-active'));
+            }
+        }
+    });
+}
+
+// Ensure navbar init after showing main content
+(function() {
+    const originalShowMainContent = window.showMainContent;
+    if (typeof originalShowMainContent === 'function') {
+        window.showMainContent = function() {
+            originalShowMainContent.apply(this, arguments);
+            setTimeout(initNavbarScroll, 0);
+        };
+    } else {
+        // Fallback: try init after DOMContentLoaded when navbar exists
+        document.addEventListener('DOMContentLoaded', () => {
+            if (document.querySelector('.top-navbar')) {
+                initNavbarScroll();
+            }
+        });
+    }
+})();
