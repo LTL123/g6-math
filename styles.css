@@ -1235,6 +1235,100 @@ main {
     overflow: hidden;
 }
 
+/* Teacher Note Section Styles */
+.teacher-note-section {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    background-color: #f6f6fb;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+}
+
+.teacher-note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.teacher-note-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.teacher-note-header h4 {
+    margin: 0;
+    color: #333;
+}
+
+.teacher-note-toggle-btn {
+    background: #6c5ce7;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.teacher-note-toggle-btn:hover {
+    background: #5849d6;
+    transform: scale(1.05);
+}
+
+.teacher-note-refresh-btn {
+    background: #10b981; /* emerald */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.teacher-note-refresh-btn:hover {
+    background: #0ea370;
+    transform: scale(1.05);
+}
+
+.teacher-note-content {
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.teacher-note-content.collapsed {
+    max-height: 0;
+    padding: 0 !important;
+}
+
+.teacher-notes-display {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.teacher-note {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    border-left: 4px solid #764ba2;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.teacher-note-meta {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 6px;
+}
+
+.teacher-note-text {
+    color: #222;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
 .comment-content.collapsed {
     max-height: 0;
     padding: 0;
@@ -2491,4 +2585,14 @@ main {
     color: #fff;
     padding: 12px 14px;
     border-radius: 8px;
-    font
+    font-size: 0.95rem;
+    line-height: 1.5;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    z-index: 9999;
+    pointer-events: none;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-height: 60vh;
+    overflow: auto;
+}

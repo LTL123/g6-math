@@ -8,6 +8,95 @@ AV.init({
 // 用户管理
 let currentUser = null;
 
+// 教师留言 LeanCloud 配置（G6 教师面板同一应用）
+const LC_TEACHER = {
+    appId: 'G9VqaMo4r9Kl7cCbDqg79o5k-gzGzoHsz',
+    appKey: 'ukwaWUiWaTugjrNfIpL2Rs91',
+    server: 'https://g9vqamo4.lc-cn-n1-shared.com/1.1',
+    sessionToken: null
+};
+
+function getValidUsersMap() {
+    return {
+        'test': '123456',
+        'user':'123456',
+        'Yuki': '20131025',
+        'Sarah': '20140409',
+        'Richard': '20140731',
+        'Taylor': '20140708',
+        'Samuel': '20140102',
+        'Orange': '20140427',
+        'Eddy': '20140824',
+        'Butterfly': '20130927',
+        'Avina': '20131226',
+        'Ella': '20140415',
+        'Bella': '20140714',
+        'Zoe': '20140528',
+        'Yiyi': '20140722',
+        'Stephen': '20140408',
+        'Jimmy': '20131214',
+        'Suzy': '20130723',
+        'Alicia': '20140820'
+    };
+}
+
+async function teacherLcRequest(path, { method = 'GET', body = null, query = null } = {}) {
+    const url = new URL(`${LC_TEACHER.server}${path}`);
+    if (query) {
+        Object.entries(query).forEach(([key, value]) => {
+            url.searchParams.set(key, value);
+        });
+    }
+    const headers = {
+        'X-LC-Id': LC_TEACHER.appId,
+        'X-LC-Key': LC_TEACHER.appKey,
+        'Content-Type': 'application/json'
+    };
+    if (LC_TEACHER.sessionToken) {
+        headers['X-LC-Session'] = LC_TEACHER.sessionToken;
+    }
+    const res = await fetch(url.toString(), {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined
+    });
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`LeanCloud request failed: ${res.status} ${text}`);
+    }
+    return await res.json();
+}
+
+async function teacherLcLoginOrSignup(username, password) {
+    try {
+        const loginData = await teacherLcRequest('/login', {
+            query: { username, password }
+        });
+        LC_TEACHER.sessionToken = loginData.sessionToken;
+        return loginData;
+    } catch (err) {
+        // Try signup if login failed
+        try {
+            const signupData = await teacherLcRequest('/users', {
+                method: 'POST',
+                body: { username, password }
+            });
+            LC_TEACHER.sessionToken = signupData.sessionToken || null;
+            // If sessionToken missing, attempt login again
+            if (!LC_TEACHER.sessionToken) {
+                const relogin = await teacherLcRequest('/login', {
+                    query: { username, password }
+                });
+                LC_TEACHER.sessionToken = relogin.sessionToken;
+            }
+            return signupData;
+        } catch (signupErr) {
+            console.warn('Teacher LC signup/login failed:', signupErr);
+            return null;
+        }
+    }
+}
+
 // 登录功能
 function initLogin() {
     const loginModal = document.getElementById('loginModal');
@@ -84,6 +173,16 @@ function initLogin() {
     currentUserSpan.textContent = currentUser;
     loadUserRatings();
 
+    // 登录到教师留言的 LeanCloud 应用，以便读取仅当前学生可见的留言
+    const pw = getValidUsersMap()[currentUser];
+    if (pw) {
+        try {
+            await teacherLcLoginOrSignup(currentUser, pw);
+        } catch (e) {
+            console.warn('无法登录教师留言服务，教师留言可能无法加载。', e);
+        }
+    }
+
     // After rendering, initialize comment forms and load existing comments
     // Use a timeout to ensure the DOM has been updated by the async render function
     setTimeout(() => {
@@ -97,6 +196,13 @@ function initLogin() {
             if (unitTitleElement && commentsDisplay) {
                 const unitId = unitTitleElement.textContent; // Fragile, but matches what's available
                 loadUnitComments(unitId, commentsDisplay);
+            }
+            const teacherNotesDisplay = unitDiv.querySelector('.teacher-notes-display');
+            if (teacherNotesDisplay) {
+                const unitKey = mapUnitKeyFromDiv(unitDiv);
+                if (unitKey) {
+                    loadTeacherNotesForUnit(unitKey, teacherNotesDisplay);
+                }
             }
         });
     }, 250); // A small delay for safety
@@ -389,6 +495,109 @@ function toggleExemplar(button) {
     }
 }
 
+// Toggle for Teacher Notes section
+function toggleTeacherNotes(button) {
+    const section = button.closest('.teacher-note-section');
+    const content = section.querySelector('.teacher-note-content');
+    const isCollapsed = content.classList.contains('collapsed');
+    if (isCollapsed) {
+        content.classList.remove('collapsed');
+        button.textContent = '▼';
+    } else {
+        content.classList.add('collapsed');
+        button.textContent = '▶';
+    }
+}
+
+// 点击“更新”按钮时，手动刷新该单元的教师留言
+function refreshTeacherNotes(button) {
+    const section = button.closest('.teacher-note-section');
+    const unitDiv = button.closest('.unit');
+    const displayElement = section.querySelector('.teacher-notes-display');
+    const unitKey = mapUnitKeyFromDiv(unitDiv);
+
+    if (!unitKey || !displayElement) return;
+
+    const originalText = button.textContent;
+    button.textContent = '更新中…';
+    button.disabled = true;
+
+    // 显示更新提示
+    displayElement.innerHTML = '<div class="teacher-note"><div class="teacher-note-meta">正在更新教师留言…</div></div>';
+
+    Promise.resolve()
+        .then(() => loadTeacherNotesForUnit(unitKey, displayElement))
+        .finally(() => {
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+}
+
+function mapUnitKeyFromDiv(unitDiv) {
+    if (!unitDiv || !unitDiv.id) return null;
+    const match = unitDiv.id.match(/^unit-(\d+)/);
+    if (match) return `unit${match[1]}`;
+    return null;
+}
+
+function normalizeUnitId(raw) {
+    if (!raw && raw !== 0) return null;
+    const str = String(raw);
+    // Try to extract a unit number from common patterns: "unit2", "unit-2", "Unit 2", "2"
+    const m = str.match(/unit\s*[-_]?\s*(\d+)/i) || str.match(/\b(\d)\b/);
+    if (m && m[1]) return `unit${m[1]}`;
+    return null;
+}
+
+async function loadTeacherNotesForUnit(unitKey, displayElement) {
+    if (!displayElement) return;
+    if (!currentUser) {
+        displayElement.innerHTML = '<div class="teacher-note">请先登录以查看教师留言。</div>';
+        return;
+    }
+    if (!LC_TEACHER.sessionToken) {
+        displayElement.innerHTML = '<div class="teacher-note">教师留言服务未连接，稍后将自动重试或请刷新页面。</div>';
+        return;
+    }
+    try {
+        // 宽松查询：仅按学生名查询，前端再按单元过滤，防止因历史数据unitId不一致导致漏显
+        const where = JSON.stringify({ studentName: currentUser });
+        const data = await teacherLcRequest('/classes/G6TeacherComment', {
+            query: { where, order: '-createdAt', limit: '100' }
+        });
+        const allNotes = data.results || [];
+        const notes = allNotes.filter(n => normalizeUnitId(n.unitId) === unitKey);
+        displayElement.innerHTML = '';
+        notes.forEach(n => {
+            const noteEl = renderTeacherNote(n);
+            displayElement.appendChild(noteEl);
+        });
+        if (notes.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'teacher-note';
+            empty.textContent = '暂无教师留言。';
+            displayElement.appendChild(empty);
+        }
+    } catch (e) {
+        console.error(`加载教师留言失败 (${unitKey}):`, e);
+    }
+}
+
+function renderTeacherNote(note) {
+    const wrap = document.createElement('div');
+    wrap.className = 'teacher-note';
+    const meta = document.createElement('div');
+    meta.className = 'teacher-note-meta';
+    const createdAt = note.createdAt ? new Date(note.createdAt).toLocaleString() : '';
+    meta.textContent = `时间：${createdAt}`;
+    const text = document.createElement('div');
+    text.className = 'teacher-note-text';
+    text.textContent = note.text || note.message || note.content || '';
+    wrap.appendChild(meta);
+    wrap.appendChild(text);
+    return wrap;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // 初始化登录功能
     initLogin();
@@ -628,6 +837,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // 暴露为全局
     window.addExpandCollapseAllButtons = addExpandCollapseAllButtons;
+
+    // 提供与按钮相同逻辑的程序化方法，供导航点击时调用
+    function expandAllContents(container) {
+        if (!container) return;
+        const contents = container.querySelectorAll('.collapsible-content');
+        const icons = container.querySelectorAll('.toggle-icon');
+        contents.forEach(content => {
+            content.classList.remove('collapsed');
+            content.style.maxHeight = 'none';
+            content.style.padding = '';
+            // 强制重排以确保测量准确
+            content.offsetHeight;
+            const calculatedHeight = Math.max(content.scrollHeight, content.offsetHeight) + 100;
+            content.style.maxHeight = calculatedHeight + 'px';
+        });
+        icons.forEach(icon => {
+            icon.classList.remove('rotated');
+        });
+    }
+
+    function collapseAllContents(container) {
+        if (!container) return;
+        const contents = container.querySelectorAll('.collapsible-content');
+        const icons = container.querySelectorAll('.toggle-icon');
+        contents.forEach(content => {
+            content.classList.add('collapsed');
+            content.style.maxHeight = '0';
+            content.style.padding = '0';
+        });
+        icons.forEach(icon => {
+            icon.classList.add('rotated');
+        });
+    }
+    // 暴露为全局以便其他模块复用
+    window.expandAllContents = expandAllContents;
+    window.collapseAllContents = collapseAllContents;
     
     // Add expand/collapse all buttons
     addExpandCollapseAllButtons();
@@ -963,6 +1208,12 @@ function initNavbarScroll() {
             if (targetEl) {
                 // Enter single-unit mode
                 showOnlyUnitById(targetId);
+                // 导航点击时：先全部折叠再全部展开（作用域限定在该单元）
+                if (window.collapseAllContents && window.expandAllContents) {
+                    window.collapseAllContents(targetEl);
+                    // 使用微小延时确保样式应用后再展开，避免高度计算抖动
+                    setTimeout(() => window.expandAllContents(targetEl), 0);
+                }
                 // Update hash to reflect current unit
                 if (window.location.hash !== `#${targetId}`) {
                     window.location.hash = targetId;
